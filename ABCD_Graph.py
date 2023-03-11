@@ -3,8 +3,7 @@ import toml
 import networkx as nx
 import os
 import numpy as np
-
-def call_julia_file(julia_file_path, args):
+def __call_julia_file(julia_file_path, args):
     # Build the command to execute the Julia file
     julia_executable = subprocess.check_output(["which", "julia"]).strip()
     command = [julia_executable, "--startup-file=no", julia_file_path] + args
@@ -14,6 +13,9 @@ def call_julia_file(julia_file_path, args):
 
     # Return the result
     return result
+def __Path_maker(path):
+    return (path+('/'if path[-1] != '/'else '')) if path != None else ''
+
 
 def ABCD_Graph(n:int,t1:float,d_min:int,d_max:int,d_max_iter:int,t2:float,c_min:int,c_max:int,c_max_iter:int,xi:float,mu:float=None,islocal:bool=False,isCL:bool=False,degreefile:str='deg.dat',communitysizesfile:str='cs.dat',communityfile:str='com.dat',networkfile:str='edge.dat',nout:int=0,seed:int=None,path:str = None)-> nx.Graph:
     '''> This function generates a network with the given parameters
@@ -72,10 +74,8 @@ def ABCD_Graph(n:int,t1:float,d_min:int,d_max:int,d_max_iter:int,t2:float,c_min:
         A networkx graph object with the community attribute set for each node.
     
     '''
-    
     data = locals()
-    path = (path+('/'if path[-1] != '/'else '')) if path != None else ''
-
+    path = __Path_maker(path)
     if path != '':
         if not os.path.exists(path):
             os.makedirs(path)
@@ -105,7 +105,7 @@ def ABCD_Graph(n:int,t1:float,d_min:int,d_max:int,d_max_iter:int,t2:float,c_min:
     F = open("ABCDGraphGenerator/utils/Graph.toml", "w")
     data = toml.dump(data,F)
     F.close()
-    call_julia_file("ABCDGraphGenerator/utils/abcd_sampler.jl",["ABCDGraphGenerator/utils/Graph.toml"])
+    __call_julia_file("ABCDGraphGenerator/utils/abcd_sampler.jl",["ABCDGraphGenerator/utils/Graph.toml"])
     net = nx.read_edgelist(path+"edge.dat", nodetype=int)
     community = np.loadtxt(path+"com.dat", dtype=int)
     sort  = np.argsort(community[:,0])
@@ -113,3 +113,28 @@ def ABCD_Graph(n:int,t1:float,d_min:int,d_max:int,d_max_iter:int,t2:float,c_min:
     community = {i+1:community[i,1] for i in range(len(community))}
     nx.set_node_attributes(net,community,'community')
     return net
+
+def CheckGraph(path:str='',degreefile:str='deg.dat',communitysizesfile:str='cs.dat',communityfile:str='com.dat',networkfile:str='edge.dat'):
+    '''`CheckGraph(path:str='',degreefile:str='deg.dat',communitysizesfile:str='cs.dat',communityfile:str='com.dat',networkfile:str='edge.dat')`
+    
+    This function checks if the graph is valid or not
+    
+    Parameters
+    ----------
+    path : str
+        The path to the directory where the files are located.
+    degreefile : str, optional
+        the file containing the degree sequence
+    communitysizesfile : str, optional
+        The file containing the community sizes.
+    communityfile : str, optional
+        The file that contains the community information.
+    networkfile : str, optional
+        The file containing the network.
+    
+    '''
+    list = [degreefile,communitysizesfile,communityfile,networkfile]
+    path = __Path_maker(path)
+    list = [path+ f for f in list]
+    resutls =__call_julia_file('ABCDGraphGenerator/utils/graph_check.jl',[*list,'true'])
+    return resutls
