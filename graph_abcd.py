@@ -15,6 +15,8 @@ class GraphABCD:
     It is used to generate a graph with the given parameters. 
     The link to the original repository is https://github.com/bkamins/ABCDGraphGenerator.jl
     '''
+    possible = set(['n','t1','d_min','d_max','d_max_iter','t2','c_min','c_max','c_max_iter',
+                    'xi','mu','islocal','isCL','nout','seed','path'])
     def __init__(self,n:int,t1:float,d_min:int,
                 d_max:int,t2:float,
                 c_min:int,c_max:int,c_max_iter:int=1000,d_max_iter:int=1000,
@@ -97,7 +99,18 @@ class GraphABCD:
     def modify_args(self,**kwargs):
         """
         Modifies the parameters of the graph generator.
+        
+        Parameters
+        ----------
+        Possible parameters are:
+        n, t1, d_min, d_max, d_max_iter, t2, c_min, c_max, c_max_iter,
+        xi, mu, islocal, isCL, nout, seed, path
+        
+        For more information about the parameters see the GraphABCD class documentation.
         """
+        if not set(kwargs.keys()).issubset(self.possible):
+            notin = set(kwargs.keys()).difference(self.possible)
+            raise ValueError("The following parameters are not valid: "+str(notin))
         for key,val in kwargs.items():
             if key == 'mu':
                 self.mu = val
@@ -117,18 +130,6 @@ class GraphABCD:
                 self.args[key] = 'true' if val else 'false'
             else:
                 self.args[key] = str(val)
-
-    def __path__maker(self,path):
-        if path is None:
-            self.tempfile = True
-            self.path = ''
-        elif path == '':
-            self.path = path
-        else:
-            self.path = path+('/'if path[-1] != '/'else '')
-            if not os.path.exists(self.path):
-                os.makedirs(self.path)
-        self.path_dir = None
 
     def generate(self):
         '''
@@ -205,3 +206,14 @@ class GraphABCD:
         args['communityfile'] = path+'com.dat'
         args['networkfile'] = path+'edge.dat'
         return args
+
+    def __path__maker(self,path):
+        if path is None:
+            self.tempfile = True
+            self.path = ''
+        elif path == '':
+            self.path = os.getcwd()+'/'
+        else:
+            self.path = path+('/'if path[-1] != '/'else '')
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
